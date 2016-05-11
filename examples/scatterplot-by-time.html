@@ -1,0 +1,93 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Scatterplot By Time</title>
+
+    <link rel="stylesheet" href="//js.arcgis.com/3.16/esri/themes/calcite/dijit/calcite.css">
+    <link rel="stylesheet" href="//js.arcgis.com/3.16/esri/themes/calcite/esri/esri.css">
+    <link rel="stylesheet" href="../src/scatterplot-by-time/chart.css">
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 60%;
+            width: 100%;
+        }
+        .footer {
+            height: 100px;
+            width: 100%;
+            margin: 0 auto;
+        }
+    </style>
+    
+    <script src="//js.arcgis.com/3.16/"></script>
+ 
+    <!-- App -->
+    <script>
+        require(["../src/scatterplot-by-time/chart.js", "esri/arcgis/utils", "esri/TimeExtent", "esri/layers/TimeInfo", "esri/dijit/TimeSlider", "dojo/dom", "dojo/parser", "dojo/domReady!"], function(ScatterplotByTime, arcgisUtils, TimeExtent, TimeInfo, TimeSlider, dom, parser) {
+            
+            parser.parse();
+            
+            var map, layer, timeExtent, timeSlider, chart;
+            var time = { start: new Date("9/30/2013 12:00:00"), end: new Date("9/30/2013 13:00:00") };
+            var mapDeferred = arcgisUtils.createMap("987b9dac29a44911a430d20b0ffe0c99", "map");
+            
+            mapDeferred.then(function(response) {
+                console.log(response);
+	    		map = response.map;
+                layer = map.getLayer("all_planes_24hours_6854");
+                timeExtent = new TimeExtent();
+                timeExtent.endTime = time.end;
+                timeExtent.startTime = time.start;
+                initTimeSlider();
+                initChart();
+	    	});
+            
+            function initTimeSlider() {
+                timeSlider = new TimeSlider({ style: "width: 100%;"}, dom.byId("timeSliderView"));
+                timeSlider.setThumbCount(1);
+                timeSlider.createTimeStopsByTimeInterval(timeExtent, 1, TimeInfo.UNIT_MINUTES);
+                timeSlider.setThumbIndexes([0]);
+                timeSlider.startup();
+                map.setTimeSlider(timeSlider);
+            }
+            
+            function initChart() {
+                chart = new ScatterplotByTime({
+                    map: map,
+                    layer: layer,
+                    dateField: "DATE",
+                    valueField: "ALTITUDE",
+                    dateLabel: "日時",
+                    valueLabel: "高度",
+                    timeExtent: timeExtent
+                }, "chartView");
+                chart.startup();
+                
+                timeSlider.on("time-extent-change", updateChartHighlight);
+            }
+            
+            function updateChartHighlight(e) {
+                console.log(e);
+                chart.setHightlightRange(e);
+            }
+
+        });
+    </script>
+
+  </head>
+
+  <body class="calcite">
+    <div id="map"></div>
+    <div class="footer">
+        <div id="timeSliderView"></div>
+        <div id="chartView"></div>
+    </div>
+  </body>
+</html>

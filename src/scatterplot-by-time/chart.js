@@ -7,11 +7,14 @@ define([
 	'dojo/dom-style',
 	'dojo/on',
 	'dojo/dom-class',
+    
+    'esri/tasks/query',
+    'esri/tasks/QueryTask',
 
   'https://d3js.org/d3.v3.min.js',
 
 	'dojo/Evented'
-], function (declare, lang, dom, domConstruct, arrayUtils, domStyle, on, domClass, d3, Evented) {
+], function (declare, lang, dom, domConstruct, arrayUtils, domStyle, on, domClass, Query, QueryTask, d3, Evented) {
 	return declare([], {
 		constructor: function() {
 			console.log(arguments);
@@ -31,19 +34,20 @@ define([
 
 			this.tooltip = d3.select('body').append('div').attr('class', 'tooltip').style('opacity', 0);
 			this.margin = {top: 20, right: 40, bottom: 60, left: 50};
-			this.width = window.innerWidth - margin.left - margin.right;
-			this.height = 300 - margin.top - margin.bottom;
-			this.x = d3.time.scale().range([0, width]);
-			this.y = d3.scale.linear().range([height, 0]);
+			this.width = window.innerWidth - this.margin.left - this.margin.right;
+			this.height = 300 - this.margin.top - this.margin.bottom;
+			this.x = d3.time.scale().range([0, this.width]);
+			this.y = d3.scale.linear().range([this.height, 0]);
 			this.color = d3.scale.category10();
 			this.xAxis = d3.svg.axis().scale(this.x).orient('bottom');
 			this.yAxis = d3.svg.axis().scale(this.y).orient('left');
 
 			this.nextStartId = 0;
+            this.queryTask = new QueryTask(this.layer.url);
 		},
 
 		startup: function() {
-			this._getInitialData(0);
+			this._getInitialData();
 		},
 
 		destroy: function() {
@@ -53,77 +57,112 @@ define([
 		update: function(newValue) {
 
 		},
-
-		_getInitialData: function(startId) {
+        
+        _getNextData: function(startId) {
 			var data = this.data;
+            var me = this;
 
 			var query = new Query();
 			query.outFields = ['*'];
-      query.returnGeometry = false;
+            query.timeExtent = this.timeExtent;
+            query.returnGeometry = false;
 			if(this.layer.getDefinitionExpression()) {
 				query.where = this.layer.getDefinitionExpression();
-			};
+			}
 			else {
-				query.where = '1=1';
+				query.where = 'OBJECTID > ' + startId;;
 			}
 			this.queryTask.execute(query, function(e) {
 				arrayUtils.forEach(e.features, function(f) {
-            if(f.attributes[this.dateField] != null || f.attributes[this.dateField] != undefined) {
+            if(f.attributes[me.dateField] != null || f.attributes[me.dateField] != undefined) {
                 data.push(f.attributes);
             }
         });
 
         if(e.exceededTransferLimit === true) {
-            this.nextStartId += 1000;
-            this._getInitialData(this.nextStartId);
+            me.nextStartId += 1000;
+            me._getNextData(me.nextStartId);
+            me.data = data;
         }
         else {
-            console.log("finish: successGetEQAllData", eq_allData);
-            initChart(eq_allData);
+            console.log("finish: successGetAllData");
+            me.data = data;
+			me._displayGraph(me.data);
         }
 			}, function(err) {console.log(err);});
-		}
+        },
 
-			this.data = data;
-			this._displayGraph(this.data);
+		_getInitialData: function() {
+			var data = this.data;
+            var me = this;
+
+			var query = new Query();
+			query.outFields = ['*'];
+            query.timeExtent = this.timeExtent;
+            query.returnGeometry = false;
+			if(this.layer.getDefinitionExpression()) {
+				query.where = this.layer.getDefinitionExpression();
+			}
+			else {
+				query.where = '1=1';
+			}
+			this.queryTask.execute(query, function(e) {
+				arrayUtils.forEach(e.features, function(f) {
+            if(f.attributes[me.dateField] != null || f.attributes[me.dateField] != undefined) {
+                data.push(f.attributes);
+            }
+        });
+
+        if(e.exceededTransferLimit === true) {
+            me.nextStartId += 1000;
+            me._getNextData(me.nextStartId);
+            me.data = data;
+        }
+        else {
+            console.log("finish: successGetAllData");
+            me.data = data;
+			me._displayGraph(me.data);
+        }
+			}, function(err) {console.log(err);});
 		},
 
 		_displayGraph: function(data) {
       var layer = this.layer;
+      var me = this;
 
-      var graph = d3.select('#' + this.divId).append('svg')
-          .attr('width', this.width + this.margin.left + this.margin.right)
-          .attr('height', this.height + this.margin.top + this.margin.bottom)
+      var graph = d3.select('#' + me.divId).append('svg')
+          .attr('width', me.width + me.margin.left + me.margin.right)
+          .attr('height', me.height + me.margin.top + me.margin.bottom)
           .append('g')
-          .attr('transform', 'translate(' + this.margin.left + ',' + this.margin.top + ')');
+          .attr('transform', 'translate(' + me.margin.left + ',' + me.margin.top + ')');
 
       arrayUtils.forEach(data, function(d) {
-          d[this.valueField] = +d[this.valueField];
-          d[this.dateField] = +d[this.dateField];
+          d[me.valueField] = +d[me.valueField];
+          d[me.dateField] = +d[me.dateField];
       });
 
-      this.x.domain(d3.extent(data, function(d) { return d[this.dateField]; })).nice();
-      this.y.domain(d3.extent(data, function(d) { return d[this.valueField]; })).nice();
+      me.x.domain(d3.extent(data, function(d) { return d[me.dateField]; })).nice();
+      me.y.domain(d3.extent(data, function(d) { return d[me.valueField]; })).nice();
 
       // X軸
       graph.append('g')
           .attr('class', 'x axis')
-          .attr('transform', 'translate(0,' + this.height + ')')
+          .attr('transform', 'translate(0,' + me.height + ')')
           .style('fill', '#9d9d9d')
-          .call(this.xAxis)
+          .call(me.xAxis)
           .append('text')
           .attr('class', 'label')
-          .attr('x', width)
+          .attr('x', me.width)
           .attr('y', -6)
           .style('text-anchor', 'end')
           .style('fill', '#9d9d9d')
-          .text(this.dateLabel);
+          .text(me.dateLabel);
 
       // Y軸
       graph.append('g')
           .attr('class', 'y axis')
           .style('fill', '#9d9d9d')
-          .call(this.yAxis)
+          .call(me.yAxis)
           .append('text')
           .attr('class', 'label')
           .attr('transform', 'rotate(-90)')
@@ -131,16 +170,17 @@ define([
           .attr('dy', '.71em')
           .style('text-anchor', 'end')
           .style('fill', '#9d9d9d')
-          .text(this.valueLabel);
+          .text(me.valueLabel);
 
       // プロット（ドット）
       graph.selectAll('.dot')
           .data(data)
           .enter().append('circle')
           .attr('class', 'dot')
-          .attr('r', function(d) { return d[this.valueField]; })
-          .attr('cx', function(d) { return this.x(d[this.dateField]); })
-          .attr('cy', function(d) { return this.y(d[this.valueField]); })
+          .attr('r', '3')
+          //.attr('r', function(d) { return d[me.valueField]; })
+          .attr('cx', function(d) { return me.x(d[me.dateField]); })
+          .attr('cy', function(d) { return me.y(d[me.valueField]); })
           .on('mouseover', lang.hitch(function(d) {
               // ツールチップ
               var xoffset;
@@ -150,11 +190,11 @@ define([
               else {
                   xoffset = -165;
               }
-              tooltip.transition()
+              me.tooltip.transition()
                   .duration(200)
                   .style('opacity', .9);
-              tooltip.html(new Date(d[this.dateField]).getFullYear() + '/' + (new Date(d[this.dateField]).getMonth() + 1) + '/' + new Date(d[this.dateField]).getDate() + '<br/>' +
-                          this.valueLabel + d[this.valueField])
+              me.tooltip.html(new Date(d[me.dateField]).getFullYear() + '/' + (new Date(d[me.dateField]).getMonth() + 1) + '/' + new Date(d[me.dateField]).getDate() + '<br/>' +
+                          me.valueLabel + d[me.valueField])
                   .style('left', (d3.event.pageX + xoffset) + 'px')
                   .style('top', (d3.event.pageY - 40) + 'px');
 
@@ -169,7 +209,7 @@ define([
           }))
           .on('mouseout', function() {
               // ツールチップ消去
-              tooltip.transition()
+              me.tooltip.transition()
                   .duration(400)
                   .style('opacity', 0);
               // マップ連動（ハイライト消去）
@@ -180,16 +220,19 @@ define([
 		},
 
 		// レンジハイライト
-    setTimeExtent: function(timeExtent) {
+    setHightlightRange: function(timeExtent) {
+        console.log(timeExtent);
 			var start = timeExtent.startTime;
 			var end = timeExtent.endTime;
+            var me = this;
+            
       this.graph.selectAll(".active-dot")
           .attr("class", "dot");
 
       this.graph.selectAll(".dot")
           .attr("class", function(d) {
               //console.log(new Date(d.UTC_DATETIME));
-              var date = new Date(d[this.dateField]);
+              var date = new Date(d[me.dateField]);
               //console.log(d);
               if(start <= date && end > date) {
                   return "active-dot";

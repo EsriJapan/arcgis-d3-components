@@ -1,5 +1,7 @@
 # D3 Components for Esri JSAPI
 
+![](img/banner.png)
+
 ArcGIS API for JavaScript で Web アプリを開発する際に利用可能な D3 コンポーネントです。
 
 ## 使用している製品・プロジェクト
@@ -16,7 +18,7 @@ ArcGIS API for JavaScript で Web アプリを開発する際に利用可能な 
 <table>
     <tr valign="top">
         <td width="25%"><a href="http://esrijapan.github.io/arcgis-d3-components/examples/animated-sparkline.html"><img width="133" src="img/animated-sparkline.png"><br>Animated Sparkline</a></td>
-        <td width="25%"><a href=""><img width="133" src="img/blank.png"><br></a></td>
+        <td width="25%"><a href="http://esrijapan.github.io/arcgis-d3-components/examples/scatterplot-by-time.html"><img width="133" src="img/scatterplot-by-time.png"><br>Scatterplot by Time</a></td>
         <td width="25%"><a href=""><img width="133" src="img/blank.png"><br></a></td>
         <td width="25%"><a href=""><img width="133" src="img/blank.png"><br></a></td>
     </tr>
