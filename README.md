@@ -2,7 +2,7 @@
 
 ![](img/banner.png)
 
-ArcGIS API for JavaScript で Web アプリを開発する際に利用可能な D3 コンポーネントです。
+ArcGIS API for JavaScript で作成した地図との連携のための D3 コンポーネントです。
 
 ## 使用している製品・プロジェクト
 
